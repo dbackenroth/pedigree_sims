@@ -89,8 +89,28 @@ Analyze <- function(fam_file, seg_file) {
     pm[ids$V2, ] <- pm[ids$V3, ] + pm[ids$V4, ]
   }
   current_pm <- pm[current_gen_ids, ]
-  cor_current <- cor(t(current_pm))
+  shared_seg <- seg[, .(longest_seg = max(V3), sum_segs = sum(V3)), by = .(V1, V2)]
+  # fill in those with no IBD segments
+  fill_in <- expand.grid(V1 = ancient_gen_ids, V2 = current_gen_ids, longest_seg = 0, sum_segs = 0) %>%
+    as.data.table()
+  shared_seg <- rbind(shared_seg, as.data.table(anti_join(fill_in, shared_seg, by = c("V1", "V2"))))
+  shared_seg[, `:=`(num_paths = pm[cbind(as.character(shared_seg$V2), as.character(shared_seg$V1))])]
   
+  
+  grid <- expand.grid(V1 = ancient_gen_ids, q = seq(0.01, 0.99, length.out = 10))
+  cors <- pmap_dfr(grid, function(V1, q, dat){
+    sub <- dat %>%
+      filter(V1 == !!V1)
+    ct <- cor.test(0 + (sub$longest_seg > quantile(sub$longest_seg, q)), sub$num_paths) %>%
+      broom::tidy() %>%
+      dplyr::transmute(estimate, conf.low, conf.high, q = q, V1 = V1)
+  }, dat = shared_seg) %>%
+    group_by(q) %>%
+    summarise(estimate = mean(estimate, na.rm = T))
+  return(cors)
+  
+  
+  cor_current <- cor(t(current_pm))
   sum_ibd <- seg[, .(sum = sum(V3)), by = .(V1, V2)]
   sum_ibd_spread <- tidyr::spread(sum_ibd, V1, sum, fill = 0) %>%
     tibble::column_to_rownames("V2")
