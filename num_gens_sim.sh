@@ -3,6 +3,9 @@
 
 # num_gens_sim.sh sim1 20
 
+# source("pedigree_2.R")
+# MakeFam(n = 1000, n_g = 100, sir = "sim3")
+
 
 dir=$1
 num=$2

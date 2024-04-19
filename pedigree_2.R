@@ -5,9 +5,9 @@ library(glue)
 library(data.table)
 
 # n: number of individuals
-# 
+# MakeFam(n = 1000, n_g = 95, dir = "Sims/sim3")
 MakeFam <- function(n = 10, n_g = 40, dir = "sim1") {
-  
+  dir.create(dir) 
   l <- vector('list', n_g + 1)
   l[[1]] <- 0:(n - 1)
   p <- vector('list', n_g)
