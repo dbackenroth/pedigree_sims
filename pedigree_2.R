@@ -47,6 +47,11 @@ MakeFam <- function(n = 10, n_g = 40, dir = "sim1") {
   system(glue("../ped-sim/fam2def.py -i {dir}/fam.fam -o {dir}/fam.def"))
 }
 
+if (F) {
+  Analyze("/Users/paolatartakoff/Daniel/carmi/sim1/20/output-everyone.fam", 
+          "/Users/paolatartakoff/Daniel/carmi/sim1/20/output_filtered.seg.gz")
+}
+
 Analyze <- function(fam_file, seg_file) {
   #fam_file <- "output-everyone.fam"
   #seg_file <- "output_filtered.seg.gz"
@@ -96,8 +101,17 @@ Analyze <- function(fam_file, seg_file) {
   shared_seg <- rbind(shared_seg, as.data.table(anti_join(fill_in, shared_seg, by = c("V1", "V2"))))
   shared_seg[, `:=`(num_paths = pm[cbind(as.character(shared_seg$V2), as.character(shared_seg$V1))])]
   
-  
-  grid <- expand.grid(V1 = ancient_gen_ids, q = seq(0.01, 0.99, length.out = 10))
+  qs <- seq(0.01, 0.99, length.out = 10)
+  cors <- map_dfr(qs, function(q, dat){
+    thresh <- quantile(dat$longest_seg, q)
+    ct <- cor.test(dat$num_paths, 0 + (dat$longest_seg > thresh)) %>% 
+      broom::tidy() %>%
+      transmute(estimate, conf.low, conf.high, q = q, thresh = thresh)
+  }, dat = shared_seg) 
+  return(cors)
+  # ggplot(a, aes(x = q, y = estimate)) + geom_line() + geom_point() + geom_errorbar(aes(ymin = conf.low, ymax = conf.high))
+  grid <- expand.grid(V1 = ancient_gen_ids, q = qs)
+  browser()
   cors <- pmap_dfr(grid, function(V1, q, dat){
     sub <- dat %>%
       filter(V1 == !!V1)
