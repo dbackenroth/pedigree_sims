@@ -101,14 +101,15 @@ Analyze <- function(fam_file, seg_file) {
   cors <- pmap_dfr(grid, function(V1, q, dat){
     sub <- dat %>%
       filter(V1 == !!V1)
-    ct <- cor.test(0 + (sub$longest_seg > quantile(sub$longest_seg, q)), sub$num_paths) %>%
+		thresh <- quantile(dat$longest_seg, q)
+    ct <- cor.test(0 + (sub$longest_seg > thresh), sub$num_paths) %>%
       broom::tidy() %>%
-      dplyr::transmute(estimate, conf.low, conf.high, q = q, V1 = V1)
+      dplyr::transmute(estimate, conf.low, conf.high, q = q, V1 = V1, 
+			                 thresh = thresh)
   }, dat = shared_seg) %>%
-    group_by(q) %>%
+    group_by(q, thresh) %>%
     summarise(estimate = mean(estimate, na.rm = T))
   return(cors)
-  
   
   cor_current <- cor(t(current_pm))
   sum_ibd <- seg[, .(sum = sum(V3)), by = .(V1, V2)]
